@@ -1,11 +1,9 @@
 package ser;
 
-import com.ser.blueline.IDatabase;
-import com.ser.blueline.IDocument;
-import com.ser.blueline.IGroup;
-import com.ser.blueline.IInformationObject;
+import com.ser.blueline.*;
 import com.ser.blueline.bpm.IWorkbasket;
 import com.ser.blueline.metaDataComponents.IArchiveClass;
+import com.sun.xml.bind.v2.schemagen.Util;
 import de.ser.doxis4.agentserver.UnifiedAgent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -79,8 +77,7 @@ public class GIBJiraTicketClassification extends UnifiedAgent {
             }
             if(gwbk == null){throw new Exception("Not found/create workbasket '" + gjra + "'");}
 
-            IDocument docGIB = createDocument(mfld);
-            Utils.copyDescriptors(document, docGIB);
+            IDocument docGIB = copyDocument(document, mfld);
             docGIB.setDescriptorValue("Sender", gwbk.getID());
             docGIB.commit();
 
@@ -95,10 +92,12 @@ public class GIBJiraTicketClassification extends UnifiedAgent {
         log.info("Finished");
         return resultSuccess("Ended successfully");
     }
-    public static IDocument createDocument(String dtyp) throws Exception {
+    public static IDocument copyDocument(IInformationObject docu, String dtyp) throws Exception {
         IArchiveClass ac = Utils.server.getArchiveClassByName(Utils.session, dtyp);
         if(ac == null){throw new Exception("ArchiveClass not found (Name : " + dtyp + ")");}
         IDatabase db = Utils.session.getDatabase(ac.getDefaultDatabaseID());
-        return Utils.server.getClassFactory().getDocumentInstance(db.getDatabaseName(), ac.getID(), "0000" , Utils.session);
+        IDocument rtrn = Utils.server.getClassFactory().getDocumentInstance(db.getDatabaseName(), ac.getID(), "0000" , Utils.session);
+        rtrn = Utils.server.copyDocument2(Utils.session, (IDocument) docu, rtrn, CopyScope.COPY_DESCRIPTORS, CopyScope.COPY_PART_DOCUMENTS);
+        return rtrn;
     }
 }
