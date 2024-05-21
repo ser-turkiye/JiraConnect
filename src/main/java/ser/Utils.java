@@ -104,6 +104,16 @@ public class Utils {
 
         }
     }
+
+    public static void copyDescriptors(IInformationObject sour, IInformationObject targ) throws Exception {
+        IValueDescriptor[] sdls = sour.getDescriptorList();
+        for(IValueDescriptor sdvl : sdls){
+            if(!hasDescriptor(targ, sdvl.getDescriptor().getName())){continue;}
+            targ.setDescriptorValueTyped(sdvl.getDescriptor().getId(),
+                    sour.getDescriptorValue(sdvl.getName())
+            );
+        }
+    }
     public static boolean hasDescriptor(IInformationObject object, String descName){
         IDescriptor[] descs = session.getDocumentServer().getDescriptorByName(descName, session);
         List<String> checkList = new ArrayList<>();

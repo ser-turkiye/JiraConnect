@@ -73,7 +73,7 @@ dependencies {
     externalImplementation group: 'com.atlassian.jira', name: 'jira-rest-java-client', version: '2.0.0-m2'
 
     // https://mvnrepository.com/artifact/io.github.openunirest/unirest-java
-    implementation group: 'io.github.openunirest', name: 'unirest-java', version: '2.5.03'
+    externalImplementation group: 'io.github.openunirest', name: 'unirest-java', version: '2.5.03'
 
     // Put local JARs not pulled from a repository into /lib
     // Example: sapjco3.jar (cannot be hosted in Artifactory)

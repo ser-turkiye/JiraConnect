@@ -25,10 +25,7 @@ import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 
 public class JiraIntegration extends UnifiedAgent {
@@ -109,6 +106,8 @@ public class JiraIntegration extends UnifiedAgent {
 
             if(!checkIntgMustFields(jisu, muss)){continue;}
 
+            List<IInformationObject> infs = new ArrayList<>();
+
             String jpth = "";
             if(jpth.isEmpty() && jisu.has("doc")){jpth = jisu.getString("doc");}
             if(jpth.isEmpty() && jisu.has("json")){jpth = jisu.getString("json");}
@@ -121,10 +120,11 @@ public class JiraIntegration extends UnifiedAgent {
                 fisu.setDescriptorValue(Conf.Descriptors.Project, cprj);
                 fisu.setDescriptorValue(Conf.Descriptors.DocID, diky);
             }
+            infs.add(fisu);
 
             String jsts = fisu.getDescriptorValue(Conf.Descriptors.Status, String.class);
             jsts = (jsts == null ? "" : jsts);
-            if(jsts.equals("Imported")){continue;}
+            //**TEST**//if(jsts.equals("Imported")){continue;}
 
             String dsky = conm + "." + prjt + "/" + line.getKey() + "/Issue-Document";
             IDocument disu = (IDocument) getDocumentIssue(cprj, diky, "Issue", dsky);
@@ -139,8 +139,9 @@ public class JiraIntegration extends UnifiedAgent {
             disu.setDescriptorValue(Conf.Descriptors.Type, "Issue");
             disu.setDescriptorValue(Conf.Descriptors.Name, isun);
             disu.setDescriptorValue(Conf.Descriptors.Status, "Imported");
-            setIntgFields(disu, jisu);
-            disu.commit();
+            infs.add(disu);
+            //setIntgFields(disu, jisu);
+            //disu.commit();
 
             //ILink flnk = Utils.server.createLink(Utils.session, fisu.getID(), null, disu.getID());
             //flnk.commit();
@@ -167,11 +168,14 @@ public class JiraIntegration extends UnifiedAgent {
                     datc.setDescriptorValue(Conf.Descriptors.Type, "Attachment");
                     datc.setDescriptorValue(Conf.Descriptors.Name, atch.getString("name"));
                     datc.setDescriptorValue(Conf.Descriptors.Status, "Imported");
-                    setIntgFields(datc, jisu);
-                    datc.commit();
+                    //setIntgFields(datc, jisu);
+                    //datc.commit();
+                    infs.add(datc);
 
+                    /*
                     ILink dlnk = Utils.server.createLink(Utils.session, disu.getID(), null, datc.getID());
                     dlnk.commit();
+                    */
                 }
             }
 
@@ -179,9 +183,11 @@ public class JiraIntegration extends UnifiedAgent {
                 line.transition().execute(trnn);
             }
 
-            setIntgFields(fisu, jisu);
-            //fisu.setDescriptorValue(Conf.Descriptors.Status, "Imported");
-            fisu.commit();
+            fisu.setDescriptorValue(Conf.Descriptors.Status, "Imported");
+            for(IInformationObject info : infs){
+                setIntgFields(info, jisu);
+                info.commit();
+            }
         }
     }
     public JSONObject getIssueStructure(String conm, JiraClient jira, String prjt, JSONObject schm, Issue line) throws Exception{
@@ -293,8 +299,9 @@ public class JiraIntegration extends UnifiedAgent {
         rtrn.setDatabaseName(db.getDatabaseName());
         return rtrn;
     }
-    public static IDocument createDocumentIssue()  {
+    public static IDocument createDocumentIssue() throws Exception {
         IArchiveClass ac = Utils.server.getArchiveClass(Conf.ClassIDs.Document, Utils.session);
+        if(ac == null){throw new Exception("ArchiveClass not found (Id : " + Conf.ClassIDs.Document + ")");}
         IDatabase db = Utils.session.getDatabase(ac.getDefaultDatabaseID());
         return Utils.server.getClassFactory().getDocumentInstance(db.getDatabaseName(), ac.getID(), "0000" , Utils.session);
     }

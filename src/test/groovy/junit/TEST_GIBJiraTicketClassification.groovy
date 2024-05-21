@@ -22,7 +22,7 @@ class TEST_GIBJiraTicketClassification {
     void testForAgentResult() {
         def agent = new GIBJiraTicketClassification();
 
-        binding["AGENT_EVENT_OBJECT_CLIENT_ID"] = "SD0dGIB_JIRA_DOCS244882af0d-407c-4f84-99e5-b821b4f1f8a2182024-05-16T13:26:34.182Z011"
+        binding["AGENT_EVENT_OBJECT_CLIENT_ID"] = "SD0dGIB_JIRA_DOCS24a5366110-57b0-4148-8957-e95715d36420182024-05-17T12:39:27.435Z011"
 
         def result = (AgentExecutionResult) agent.execute(binding.variables)
         assert result.resultCode == 0

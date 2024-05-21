@@ -1,7 +1,11 @@
 package ser;
 
+import com.ser.blueline.IDatabase;
 import com.ser.blueline.IDocument;
+import com.ser.blueline.IGroup;
 import com.ser.blueline.IInformationObject;
+import com.ser.blueline.bpm.IWorkbasket;
+import com.ser.blueline.metaDataComponents.IArchiveClass;
 import de.ser.doxis4.agentserver.UnifiedAgent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,6 +32,10 @@ public class GIBJiraTicketClassification extends UnifiedAgent {
         document = getEventDocument();
 
         try {
+            helper = new ProcessHelper(Utils.session);
+            XTRObjects.setSession(Utils.session);
+            XTRObjects.setBpm(Utils.bpm);
+
             JSONObject wcfs = Utils.loadGIBJiraTicketClassifications();
             String fnam = document.getDescriptorValue(Conf.Descriptors.Name, String.class);
             JSONObject mcfg = null;
@@ -43,13 +51,38 @@ public class GIBJiraTicketClassification extends UnifiedAgent {
                 if(mcfg != null && mcfg.getInt("priority") <= wcfg.getInt("priority")){continue;}
                 mcfg = wcfg;
             }
-            if(mcfg != null){
-                document.setDescriptorValue(Conf.Descriptors.GIB_MainFolder,
-                    mcfg.has("mainFolder") ? mcfg.getString("mainFolder") : "");
-                document.setDescriptorValue(Conf.Descriptors.GIB_DocumentType,
-                    mcfg.has("docType") ? mcfg.getString("docType") : "");
-                document.commit();
+            if(mcfg == null){throw new Exception("Wildcard config not found.");}
+
+            String mfld = (mcfg.has("mainFolder") && mcfg.getString("mainFolder") != null ?
+                    mcfg.getString("mainFolder") : "");
+            if(mfld.isEmpty()){throw new Exception("Wildcard.mainFolder is empty.");}
+
+            String dtyp = (mcfg.has("docType") && mcfg.getString("docType") != null ?
+                    mcfg.getString("docType") : "");
+
+            document.setDescriptorValue(Conf.Descriptors.GIB_MainFolder, mfld);
+            document.setDescriptorValue(Conf.Descriptors.GIB_DocumentType, dtyp);
+            document.commit();
+
+            String gjra = "__JiraResponsibles";
+            IGroup egrp = XTRObjects.findGroup(gjra);
+            if(egrp == null){
+                egrp = XTRObjects.createGroup(gjra);
+                egrp.commit();
             }
+            if(egrp == null){throw new Exception("Not found/create group '" + gjra + "'");}
+
+            IWorkbasket gwbk = XTRObjects.getFirstWorkbasket(egrp);
+            if(gwbk == null){
+                gwbk = XTRObjects.createWorkbasket(egrp);
+                gwbk.commit();
+            }
+            if(gwbk == null){throw new Exception("Not found/create workbasket '" + gjra + "'");}
+
+            IDocument docGIB = createDocument(mfld);
+            Utils.copyDescriptors(document, docGIB);
+            docGIB.setDescriptorValue("Sender", gwbk.getID());
+            docGIB.commit();
 
         } catch (Exception e) {
             //throw new RuntimeException(e);
@@ -61,5 +94,11 @@ public class GIBJiraTicketClassification extends UnifiedAgent {
 
         log.info("Finished");
         return resultSuccess("Ended successfully");
+    }
+    public static IDocument createDocument(String dtyp) throws Exception {
+        IArchiveClass ac = Utils.server.getArchiveClassByName(Utils.session, dtyp);
+        if(ac == null){throw new Exception("ArchiveClass not found (Name : " + dtyp + ")");}
+        IDatabase db = Utils.session.getDatabase(ac.getDefaultDatabaseID());
+        return Utils.server.getClassFactory().getDocumentInstance(db.getDatabaseName(), ac.getID(), "0000" , Utils.session);
     }
 }
