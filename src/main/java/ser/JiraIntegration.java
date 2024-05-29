@@ -86,6 +86,89 @@ public class JiraIntegration extends UnifiedAgent {
             intgJiraIssues(conm, prjt, jira);
         }
     }
+    public void intgJiraIssue(String conm, String prjt, JiraClient jira, JSONObject schm, List<String> muss, String mpth, Issue line) throws Exception{
+
+        String cprj = conm + "." + prjt;
+        Issue issu = jira.getIssue(line.getKey());
+        JSONObject jisu = getIssueStructure(conm, jira, prjt, schm, issu);
+
+        if(!checkIntgMustFields(jisu, muss)){return;}
+
+        List<IInformationObject> dxas = new ArrayList<>();
+
+        String jpth = "";
+        if(jpth.isEmpty() && jisu.has("doc")){jpth = jisu.getString("doc");}
+        if(jpth.isEmpty() && jisu.has("json")){jpth = jisu.getString("json");}
+        if(jpth.isEmpty()){return;}
+
+        String diky = conm + "." + prjt + "@" + line.getKey();
+        IInformationObject fisu = getEFileIssue(cprj, diky);
+        if(fisu == null){
+            fisu = createFolderIssue();
+            fisu.setDescriptorValue(Conf.Descriptors.Project, cprj);
+            fisu.setDescriptorValue(Conf.Descriptors.DocID, diky);
+        }
+
+
+
+        String jsts = fisu.getDescriptorValue(Conf.Descriptors.Status, String.class);
+        jsts = (jsts == null ? "" : jsts);
+        //**TEST**//if(jsts.equals("Imported")){continue;}
+
+        String dsky = conm + "." + prjt + "/" + line.getKey() + "/Issue-Document";
+        IDocument disu = (IDocument) getDocumentIssue(cprj, diky, "ISSUE", dsky);
+        String isun = line.getKey() + "." + FilenameUtils.getExtension(jpth);
+        if(disu == null){
+            disu = createDocumentIssue();
+            addRepresentation(disu, mpth, jpth, isun);
+        }
+        disu.setDescriptorValue(Conf.Descriptors.Project, cprj);
+        disu.setDescriptorValue(Conf.Descriptors.ParentID, diky);
+        disu.setDescriptorValue(Conf.Descriptors.DocID, dsky);
+        disu.setDescriptorValue(Conf.Descriptors.Type, "ISSUE");
+        disu.setDescriptorValue(Conf.Descriptors.Name, isun);
+
+        if(jisu.has("attachments")){
+            JSONObject atcs = jisu.getJSONObject("attachments");
+
+            for(String akey : atcs.keySet()){
+                JSONObject atch = (JSONObject) atcs.get(akey);
+                if(!atch.has("id")){continue;}
+                if(!atch.has("path")){continue;}
+                if(!atch.has("name")){continue;}
+
+                String daky = conm + "." + prjt + "/" + line.getKey() + "/" + atch.getString("id");
+
+                IDocument datc = (IDocument) getDocumentIssue(cprj, diky, "ATTACHMENT", daky);
+                if(datc == null){
+                    datc = createDocumentIssue();
+                    addRepresentation(datc, mpth, atch.getString("path"), atch.getString("name"));
+                }
+
+                datc.setDescriptorValue(Conf.Descriptors.Project, cprj);
+                datc.setDescriptorValue(Conf.Descriptors.ParentID, diky);
+                datc.setDescriptorValue(Conf.Descriptors.DocID, daky);
+                datc.setDescriptorValue(Conf.Descriptors.Type, "ATTACHMENT");
+                datc.setDescriptorValue(Conf.Descriptors.Name, atch.getString("name"));
+                dxas.add(datc);
+            }
+        }
+
+        fisu.commit();
+        for(IInformationObject dxat : dxas){
+            setIntgFields(dxat, jisu);
+            dxat.commit();
+            Utils.connectToFolder((IFolder) fisu, "Attachments", dxat);
+        }
+
+        setIntgFields(disu, jisu);
+        disu.commit();
+        Utils.connectToFolder((IFolder) fisu, "Issue", disu);
+
+        setIntgFields(fisu, jisu);
+        fisu.setDescriptorValue(Conf.Descriptors.Status, "Imported");
+        fisu.commit();
+    }
     public void intgJiraIssues(String conm, String prjt, JiraClient jira) throws Exception{
         String cprj = conm + "." + prjt;
         String srch = getCfgString(cprj + ".issueSearch");
@@ -100,93 +183,10 @@ public class JiraIntegration extends UnifiedAgent {
         Utils.loadDirectory(mpth);
 
         for (Issue line : data.issues){
-
-            Issue issu = jira.getIssue(line.getKey());
-            JSONObject jisu = getIssueStructure(conm, jira, prjt, schm, issu);
-
-            if(!checkIntgMustFields(jisu, muss)){continue;}
-
-            List<IInformationObject> infs = new ArrayList<>();
-
-            String jpth = "";
-            if(jpth.isEmpty() && jisu.has("doc")){jpth = jisu.getString("doc");}
-            if(jpth.isEmpty() && jisu.has("json")){jpth = jisu.getString("json");}
-            if(jpth.isEmpty()){continue;}
-
-            String diky = conm + "." + prjt + "@" + line.getKey();
-            IInformationObject fisu = getEFileIssue(cprj, diky);
-            if(fisu == null){
-                fisu = createFolderIssue();
-                fisu.setDescriptorValue(Conf.Descriptors.Project, cprj);
-                fisu.setDescriptorValue(Conf.Descriptors.DocID, diky);
-            }
-            infs.add(fisu);
-
-            String jsts = fisu.getDescriptorValue(Conf.Descriptors.Status, String.class);
-            jsts = (jsts == null ? "" : jsts);
-            //**TEST**//if(jsts.equals("Imported")){continue;}
-
-            String dsky = conm + "." + prjt + "/" + line.getKey() + "/Issue-Document";
-            IDocument disu = (IDocument) getDocumentIssue(cprj, diky, "Issue", dsky);
-            String isun = line.getKey() + "." + FilenameUtils.getExtension(jpth);
-            if(disu == null){
-                disu = createDocumentIssue();
-                addRepresentation(disu, mpth, jpth, isun);
-            }
-            disu.setDescriptorValue(Conf.Descriptors.Project, cprj);
-            disu.setDescriptorValue(Conf.Descriptors.ParentID, diky);
-            disu.setDescriptorValue(Conf.Descriptors.DocID, dsky);
-            disu.setDescriptorValue(Conf.Descriptors.Type, "Issue");
-            disu.setDescriptorValue(Conf.Descriptors.Name, isun);
-            disu.setDescriptorValue(Conf.Descriptors.Status, "Imported");
-            infs.add(disu);
-            //setIntgFields(disu, jisu);
-            //disu.commit();
-
-            //ILink flnk = Utils.server.createLink(Utils.session, fisu.getID(), null, disu.getID());
-            //flnk.commit();
-
-            if(jisu.has("attachments")){
-                JSONObject atcs = jisu.getJSONObject("attachments");
-
-                for(String akey : atcs.keySet()){
-                    JSONObject atch = (JSONObject) atcs.get(akey);
-                    if(!atch.has("id")){continue;}
-                    if(!atch.has("path")){continue;}
-                    if(!atch.has("name")){continue;}
-
-                    String daky = conm + "." + prjt + "/" + line.getKey() + "/" + atch.getString("id");
-
-                    IDocument datc = (IDocument) getDocumentIssue(cprj, diky, "Attachment", daky);
-                    if(datc == null){
-                        datc = createDocumentIssue();
-                        addRepresentation(datc, mpth, atch.getString("path"), atch.getString("name"));
-                    }
-                    datc.setDescriptorValue(Conf.Descriptors.Project, cprj);
-                    datc.setDescriptorValue(Conf.Descriptors.ParentID, diky);
-                    datc.setDescriptorValue(Conf.Descriptors.DocID, daky);
-                    datc.setDescriptorValue(Conf.Descriptors.Type, "Attachment");
-                    datc.setDescriptorValue(Conf.Descriptors.Name, atch.getString("name"));
-                    datc.setDescriptorValue(Conf.Descriptors.Status, "Imported");
-                    //setIntgFields(datc, jisu);
-                    //datc.commit();
-                    infs.add(datc);
-
-                    /*
-                    ILink dlnk = Utils.server.createLink(Utils.session, disu.getID(), null, datc.getID());
-                    dlnk.commit();
-                    */
-                }
-            }
+            intgJiraIssue(conm, prjt, jira, schm,  muss, mpth, line);
 
             for(String trnn : trns){
                 line.transition().execute(trnn);
-            }
-
-            fisu.setDescriptorValue(Conf.Descriptors.Status, "Imported");
-            for(IInformationObject info : infs){
-                setIntgFields(info, jisu);
-                info.commit();
             }
         }
     }
@@ -249,7 +249,7 @@ public class JiraIntegration extends UnifiedAgent {
     }
     private IInformationObject getEFileIssue(String cprj, String docId) {
         StringBuilder builder = new StringBuilder();
-        builder.append("TYPE = '").append(Conf.ClassIDs.Issue).append("'")
+        builder.append("TYPE = '").append(Conf.ClassIDs.EFile).append("'")
                 .append(" AND ")
                 .append(Conf.DescriptorLiterals.Project).append(" = '").append(cprj).append("'")
                 .append(" AND ")
@@ -293,7 +293,7 @@ public class JiraIntegration extends UnifiedAgent {
     private IFolder createFolderIssue() throws Exception{
         IFolderConnection folderConnection = Utils.session.getFolderConnection();
         IFolder rtrn = folderConnection.createFolder();
-        IArchiveFolderClass afc = Utils.server.getArchiveFolderClass(Conf.ClassIDs.Issue, Utils.session);
+        IArchiveFolderClass afc = Utils.server.getArchiveFolderClass(Conf.ClassIDs.EFile, Utils.session);
         IDatabase db = Utils.session.getDatabase(afc.getDefaultDatabaseID());
         rtrn.init(afc);
         rtrn.setDatabaseName(db.getDatabaseName());
@@ -362,7 +362,19 @@ public class JiraIntegration extends UnifiedAgent {
     public JSONObject getIssueDefnFields(JSONObject schm, Issue line) throws Exception{
         JSONObject rtrn = new JSONObject();
         for(String ifld : schm.keySet()){
-            rtrn.put(ifld, line.getField(schm.getString(ifld)));
+            Object lobj = line.getField(schm.getString(ifld));
+            String lval = "";
+            if(lval.isEmpty() && lobj instanceof net.sf.json.JSONObject){
+                if(((net.sf.json.JSONObject) lobj).has("value")){
+                    lval = ((net.sf.json.JSONObject) lobj).getString("value");
+                }
+            }
+            if(lval.isEmpty() && lobj instanceof java.lang.String){
+                if(lobj != null){
+                    lval = lobj.toString();
+                }
+            }
+            rtrn.put(ifld, lval);
         }
         return rtrn;
     }

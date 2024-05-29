@@ -11,8 +11,11 @@ public class Conf {
         public static final String Main = "GIB_JIRA";
         public static final String Document = "GIB_JIRA_DOCS";
     }
+    public static class ProcessInstances{
+        public static final String DocumentDefinition = "fd1c294d-ce3a-4c1c-ab73-b30bc053a8fe";
+    }
     public static class ClassIDs{
-        public static final String Issue = "8247ab44-47d5-4660-84a2-e6203107c7a1";
+        public static final String EFile = "8247ab44-47d5-4660-84a2-e6203107c7a1";
         public static final String Document = "94e7df22-126d-4100-a80d-767715256fc9";
     }
     public static class Descriptors{
@@ -22,8 +25,6 @@ public class Conf {
         public static final String Type = "ObjectType";
         public static final String Name = "ObjectDescription";
         public static final String Status = "ObjectState";
-        public static final String GIB_DocumentType = "_DocumentType";
-        public static final String GIB_MainFolder = "_MainFolder";
     }
     public static class DescriptorLiterals{
         public static final String Project = "OBJECTNAME";

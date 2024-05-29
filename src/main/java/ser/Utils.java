@@ -8,7 +8,7 @@ import com.ser.blueline.bpm.ITask;
 import com.ser.blueline.metaDataComponents.IArchiveClass;
 import com.ser.blueline.metaDataComponents.IArchiveFolderClass;
 import com.ser.blueline.metaDataComponents.IStringMatrix;
-import com.ser.foldermanager.IFolder;
+import com.ser.foldermanager.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,6 +18,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 public class Utils {
     static Logger log = LogManager.getLogger();
@@ -32,8 +33,8 @@ public class Utils {
         JSONObject rtrn = new JSONObject();
         if(session == null || server == null){return rtrn;}
 
-        IStringMatrix mtrx = server.getStringMatrix("GibJiraTicketClassifications", session);
-        if(mtrx == null) throw new Exception("GibJiraTicketClassifications Global Value List not found");
+        IStringMatrix mtrx = server.getStringMatrix("GibJiraTicketClassification", session);
+        if(mtrx == null) throw new Exception("GibJiraTicketClassification Global Value List not found");
 
         List<List<String>> rawTable = mtrx.getRawRows();
 
@@ -102,6 +103,28 @@ public class Utils {
 
             sysConfigs.put(gpnm, gobj);
 
+        }
+    }
+
+    public static void connectToFolder(IFolder folder, String fold, IInformationObject pdoc) throws Exception {
+        String pdocID = pdoc.getID();
+        List<INode> nodes = folder.getNodesByName(fold);
+        if(nodes.isEmpty()){return;}
+
+        boolean rtrn = false;
+        for(INode node : nodes){
+            boolean isex = false;
+            IElements nelements = node.getElements();
+            for(int i=0;i<nelements.getCount2();i++) {
+                IElement nelement = nelements.getItem2(i);
+                String edocID = nelement.getLink();
+                if(Objects.equals(pdocID, edocID)){
+                    isex = true;
+                    break;
+                }
+            }
+            if(isex) {continue;}
+            folder.addInformationObjectToNode(pdoc.getID(), node.getID());
         }
     }
 
