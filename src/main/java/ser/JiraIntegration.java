@@ -42,12 +42,14 @@ public class JiraIntegration extends UnifiedAgent {
         Utils.session = getSes();
         Utils.bpm = getBpm();
         Utils.server = Utils.session.getDocumentServer();
-        path = Conf.Paths.MainPath + "/" + procId;
+        String srvn = Utils.session.getSystem().getName().toUpperCase();
+
+        path = Conf.Paths.MainPath + "/JiraConnect_JiraIntegration@" + procId;
         Utils.loadDirectory(path);
 
         try {
             processHelper = new ProcessHelper(Utils.session);
-            config = Utils.getSystemConfig(Conf.CfgNames.IntegrationName);
+            config = Utils.getSystemConfig(srvn, Conf.CfgNames.IntegrationName);
             intgJiraConnections();
 
             log.info("Tested.");
@@ -60,7 +62,7 @@ public class JiraIntegration extends UnifiedAgent {
         }
 
         log.info("Finished");
-        return resultSuccess("Ended successfully");
+        return resultSuccess("Ended successfully [" + srvn + "]");
     }
     public void intgJiraConnections() throws Exception{
         String[] cons = getCfgString("Connections").split(";");
@@ -86,20 +88,20 @@ public class JiraIntegration extends UnifiedAgent {
             intgJiraIssues(conm, prjt, jira);
         }
     }
-    public void intgJiraIssue(String conm, String prjt, JiraClient jira, JSONObject schm, List<String> muss, String mpth, Issue line) throws Exception{
+    public boolean intgJiraIssue(String conm, String prjt, JiraClient jira, JSONObject schm, List<String> muss, String mpth, Issue line) throws Exception{
 
         String cprj = conm + "." + prjt;
         Issue issu = jira.getIssue(line.getKey());
         JSONObject jisu = getIssueStructure(conm, jira, prjt, schm, issu);
 
-        if(!checkIntgMustFields(jisu, muss)){return;}
+        if(!checkIntgMustFields(jisu, muss)){return false;}
 
         List<IInformationObject> dxas = new ArrayList<>();
 
         String jpth = "";
-        if(jpth.isEmpty() && jisu.has("doc")){jpth = jisu.getString("doc");}
+        if(jpth.isEmpty() && jisu.has("html")){jpth = jisu.getString("html");}
         if(jpth.isEmpty() && jisu.has("json")){jpth = jisu.getString("json");}
-        if(jpth.isEmpty()){return;}
+        if(jpth.isEmpty()){return false;}
 
         String diky = conm + "." + prjt + "@" + line.getKey();
         IInformationObject fisu = getEFileIssue(cprj, diky);
@@ -109,11 +111,10 @@ public class JiraIntegration extends UnifiedAgent {
             fisu.setDescriptorValue(Conf.Descriptors.DocID, diky);
         }
 
-
-
         String jsts = fisu.getDescriptorValue(Conf.Descriptors.Status, String.class);
         jsts = (jsts == null ? "" : jsts);
-        //**TEST**//if(jsts.equals("Imported")){continue;}
+
+        if(Arrays.asList("Imported", "Ready", "Done").contains(jsts)){return false;}
 
         String dsky = conm + "." + prjt + "/" + line.getKey() + "/Issue-Document";
         IDocument disu = (IDocument) getDocumentIssue(cprj, diky, "ISSUE", dsky);
@@ -168,6 +169,8 @@ public class JiraIntegration extends UnifiedAgent {
         setIntgFields(fisu, jisu);
         fisu.setDescriptorValue(Conf.Descriptors.Status, "Imported");
         fisu.commit();
+
+        return true;
     }
     public void intgJiraIssues(String conm, String prjt, JiraClient jira) throws Exception{
         String cprj = conm + "." + prjt;
@@ -183,9 +186,10 @@ public class JiraIntegration extends UnifiedAgent {
         Utils.loadDirectory(mpth);
 
         for (Issue line : data.issues){
-            intgJiraIssue(conm, prjt, jira, schm,  muss, mpth, line);
+            if(!intgJiraIssue(conm, prjt, jira, schm,  muss, mpth, line)){continue;}
 
             for(String trnn : trns){
+                if(trnn.isBlank()){continue;}
                 line.transition().execute(trnn);
             }
         }
@@ -200,13 +204,13 @@ public class JiraIntegration extends UnifiedAgent {
         String ipth = xpth + "/" + isid + ".json";
         downloadIssue(conm, line, ipth);
 
-        String wpth = xpth + "/" + isid + ".doc";
+        String wpth = xpth + "/" + isid + ".html";
         downloadIssueDoc(conm, line, wpth);
 
         JSONObject rtrn = new JSONObject();
         rtrn.put("key", line.getKey());
         rtrn.put("json", ipth);
-        rtrn.put("doc", wpth);
+        rtrn.put("html", wpth);
 
         JSONObject alns = new JSONObject();
         for(Attachment atch : atcs){
@@ -335,7 +339,7 @@ public class JiraIntegration extends UnifiedAgent {
 
         Unirest.setTimeouts(0, 0);
         HttpResponse<InputStream> resp = Unirest
-                .get(addr + "si/jira.issueviews:issue-word/" + issu.getKey() + "/" + issu.getKey() + ".doc")
+                .get(addr + "si/jira.issueviews:issue-html/" + issu.getKey() + "/" + issu.getKey() + ".html")
                 .header("Authorization", "Basic " + Base64.getEncoder().encodeToString((user + ":" + pass).getBytes()))
                 .asBinary();
         saveInputStreamToFile(resp.getBody(), new File(ipth));
@@ -364,6 +368,14 @@ public class JiraIntegration extends UnifiedAgent {
         for(String ifld : schm.keySet()){
             Object lobj = line.getField(schm.getString(ifld));
             String lval = "";
+            if(lval.isEmpty() && lobj instanceof net.sf.json.JSONArray){
+                if(((net.sf.json.JSONArray) lobj).size() > 0) {
+                    net.sf.json.JSONObject l1st = ((net.sf.json.JSONArray) lobj).getJSONObject(0);
+                    if (l1st.has("value")) {
+                        lval = l1st.getString("value");
+                    }
+                }
+            }
             if(lval.isEmpty() && lobj instanceof net.sf.json.JSONObject){
                 if(((net.sf.json.JSONObject) lobj).has("value")){
                     lval = ((net.sf.json.JSONObject) lobj).getString("value");

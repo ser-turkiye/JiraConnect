@@ -73,14 +73,13 @@ public class Utils {
         }
         return rtrn;
     }
-    static void loadSystemConfig() throws Exception {
+    static void loadSystemConfig(String srvn) throws Exception {
         if(session == null || server == null){return;}
 
         IStringMatrix mtrx = server.getStringMatrix("SYS_CONFIGS", session);
         if(mtrx == null) throw new Exception("SystemConfig Global Value List not found");
 
         List<List<String>> rawTable = mtrx.getRawRows();
-        String srvn = session.getSystem().getName().toUpperCase();
         sysConfigs = new JSONObject();
 
         for(List<String> line : rawTable) {
@@ -179,8 +178,8 @@ public class Utils {
         }
         return rtrn;
     }
-    static JSONObject getSystemConfig(String gpnm) throws Exception {
-        if(sysConfigs == null){loadSystemConfig();}
+    static JSONObject getSystemConfig(String srvn, String gpnm) throws Exception {
+        if(sysConfigs == null){loadSystemConfig(srvn);}
         return sysConfigs.has(gpnm) ? (JSONObject) sysConfigs.get(gpnm) : new JSONObject();
     }
 }

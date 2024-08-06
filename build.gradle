@@ -55,13 +55,13 @@ dependencies {
     externalImplementation group: 'commons-codec', name: 'commons-codec', version: '1.17.0'
 
     // https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc
-    externalImplementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '12.4.2.jre11'
+    // externalImplementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '12.4.2.jre11'
 
     // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
     externalImplementation 'org.apache.logging.log4j:log4j-core:2.20.0'
 
     // https://mvnrepository.com/artifact/org.codehaus.jettison/jettison
-    externalImplementation group: 'org.codehaus.jettison', name: 'jettison', version: '1.5.4'
+    // externalImplementation group: 'org.codehaus.jettison', name: 'jettison', version: '1.5.4'
 
     // https://mvnrepository.com/artifact/org.json/json
     externalImplementation group: 'org.json', name: 'json', version: '20231013'
@@ -70,7 +70,7 @@ dependencies {
     externalImplementation group: 'net.rcarz', name: 'jira-client', version: '0.5'
 
     // https://mvnrepository.com/artifact/com.atlassian.jira/jira-rest-java-client
-    externalImplementation group: 'com.atlassian.jira', name: 'jira-rest-java-client', version: '2.0.0-m2'
+    // externalImplementation group: 'com.atlassian.jira', name: 'jira-rest-java-client', version: '2.0.0-m2'
 
     // https://mvnrepository.com/artifact/io.github.openunirest/unirest-java
     externalImplementation group: 'io.github.openunirest', name: 'unirest-java', version: '2.5.03'

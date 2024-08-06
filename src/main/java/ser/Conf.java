@@ -5,7 +5,7 @@ public class Conf {
         public static final String IntegrationName = "JIRA_CONN";
     }
     public static class Paths {
-        public static final String MainPath = "C:/tmp2/bulk/jira-integration";
+        public static final String MainPath = System.getProperty("java.io.tmpdir");
     }
     public static class Databases{
         public static final String Main = "GIB_JIRA";
